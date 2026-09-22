@@ -15,24 +15,53 @@ build a compliant browser for these standards is ridiculous.
   during drawing
 - heavy inspiration from SPIR-V instructions:
   https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#Instructions
+  and immediate mode ui projects like Dear ImGui and egui:
+  https://www.dearimgui.com/
+  https://www.egui.rs/
 
-## FORMAT SHCEMA
+## FORMAT SCHEMA
 
-FORMAT:
+data types:
 
-- NUMBER 01
-    next byte width in bytes, 1 (8 bit) to 8 (64 bit)
+- FORMAT 01
+    one byte, number of member types
+    preceeding bytes are type of member, like members of struct
 
-- STRING 02
-    next 4 bytes, length in BYTES! (not characters, utf-8)
+- BYTE 02
+    one byte, takes 1 byte of space
 
-- VECTOR, code 03
-    next byte is FORMAT of each element, (02 for VECTOR of STRINGS)
-    next 4 bytes, size as in number of elements
-    each element is a 4 byte index into MEMORY section
+- INTEGER 03
+    one byte width in bytes, 1 (8 bit) to 6 (64 bit)
+    all INTEGERS are signed
 
-- BLOB, code 04
-    next 6 bytes, BLOB size in bytes
+- FLOAT 04
+    one byte width in bytes, 4 (float) OR 6 (double)
+
+- STRING 05
+    all strings are utf-8 encoded, no strings are null terminated
+    instances of a string begin with string length as 6 bytes (64 bit)
+
+- VECTOR 06
+
+- BLOB 07
+    6 bytes (64 bit), BLOB size in bytes
+
+- REFERENCE 08
+    6 bytes (64 bit), pointer value
+
+example types:
+
+message with a timestamp (64 bit int), one byte user id and string message
+content:
+
+01 03 03 06 02 05
+
+a vector of messages could then be represented as
+
+06 
+
+to create an instance of a message, the program will reference the offset into
+the MEMORY section where the message type is stored
 
 ## FILE LAYOUT (.ath)
 
@@ -49,57 +78,71 @@ FORMAT:
 - VERSION
     2 bytes integer (we are on version 1)
 
+- META
+    FORMAT string of author name and date
+
 ### MEMORY
 
-the memory section
+user FORMAT types and known size data put in this section
+e.g label strings, known types
+indexes into memory are 4 bytes wide
 
 ### DRAW
 
 this section contains code bytes which are executed in order from the top
-every frame
+
+instructions begin with 2 byte instruction code then list of arguments
+some instructions have another byte after instruction code, for the number of
+arguments in the list
+
 the following instructions are available:
 
 #### DRAWING INSTRUCTIONS
 
-- BEGIN_FRAME
-    label for accessibility
-    list of offsets of child frames
+more instructions to be added!
 
-- END_FRAME
-    takes no arguments
-
-- PUSH_STYLE
-    alignment
-    colours
-
-- POP_STYLE
-    takes no arguments
-
-- PUSH_TRANSFORM
-    scale
-    rotate
-
-- POP_TRANSFORM
-    takes no arguments
-
-- DRAW_TEXT
-    offset of text content in MEMORY
-    offset of font in ASSETS
-
-- DRAW_IMAGE
-    description
-    offset of image in ASSETS
-
-- DRAW_VIDEO
+- BEGIN_FRAME 00
     label
-    timestamp
-    offset of video data in ASSETS
+
+- END_FRAME 01
+    takes no arguments
+
+- PUSH_TRANSFORM 02
+    translate:  x, y
+    scale:      width, height
+    rotate:     degrees
+
+- POP_TRANSFORM 03
+    takes no arguments
+
+- DRAW_TEXT 04
+    index of text content in MEMORY
+    index of font in ASSETS
+
+- DRAW_BUTTON 05
+    text
+    pos
+    func
+
+- DRAW_IMAGE 06
+    text description
+    index of image in ASSETS
 
 #### MEMORY INSTRUCTIONS
 
 - FORMAT
+    - creates a type, 
+    like a struct, that can be identified
+    by its offset in memory
+
+    - subsequent bytes are FORMAT definition like in MEMORY section
+
+    - uninitialised memory will have a poison value and reading or writing will
+    cause the program to end
 
 - VARIABLE
+    - creates an instance of a type,
+    like an object
 
 - LOAD
 
@@ -108,20 +151,43 @@ the following instructions are available:
 #### OPERATION INSTRUCTIONS
 
 - NEG
+    index into MEMORY of value to negate
+    works on BYTE,INT,FLOAT, otherwise is NOP
 
 - ADD
+    first + second
+    index of first
+    index of second
+    index of destination
+    works on BYTE,INT,FLOAT, otherwise is NOP
 
 - SUB
+    first - second
+    index of first operand
+    index of second operand
+    index of destination
+    works on BYTE,INT,FLOAT, otherwise is NOP
 
 - MUL
+    index of first operand
+    index of second operand
+    index of destination
+    works on BYTE,INT,FLOAT, otherwise is NOP
 
 - DIV
-
-- BITWISE
+    index of first operand
+    index of second operand
+    index of destination
+    works on BYTE,INT,FLOAT, otherwise is NOP
 
 - SIZE
+    index of data object to get the size of
+    works on BYTE,INT,FLOAT, otherwise is NOP
 
 #### CONTROL-FLOW INSTRUCTIONS
+
+- NOP
+    does exactly what you think it does... nothing
 
 - BEGIN_FUNC
 
@@ -136,25 +202,19 @@ the following instructions are available:
 lots of code is deticated to async networking, we can eliminate much
 hassle by specifying fixed format then request/recv this from a source
 
-- REQUEST
+- REQUEST 40
+    - index of type to request
+    - address of function to call if PENDING state
+    - address of function to call if READY state
+    - error mask of errors
+    - address of function to call on masked error
 
-- RECEIVE
-
-#### ASSETS
-
-- asset header with position and length, same FORMAT as memory section
-- simple binary storage
-- for large assets just store the uri, they can be cached/differed/streamed
-
-## ACCESSIBILITY
-
-a11y tree created from widget names and text labels, we don't necessarily need a
-tree, since we can store an index to the current widget and walk around the
-bytecode as needed
-
-## VIDEO
-
-to be determined
+- RECEIVE 41
+    - index of type to request
+    - address of function to call if PENDING state
+    - address of function to call if READY state
+    - error mask of errors
+    - address of function to call on masked error
 
 ## PROJECT TIMELINE
 
@@ -169,16 +229,3 @@ to be determined
 - draw loop
 - walk instructions
 - draw some things from instructions
-
-### Extra Features
-
-- load a font (or other stuff) from ASSETS
-- make a server that serves a page
-- make a dynamic server than server a chat window
-
-### Finish
-
-- flexible layouts
-- make a page with a video
-- screen reader
-

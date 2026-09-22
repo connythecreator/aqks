@@ -40,6 +40,8 @@ final application bytecode (26 bytes):
 01
 
 
+---------------------------------------------------------------------------------
+
 
 example ATHRU file for a button and counter static page
 
@@ -48,10 +50,31 @@ example ATHRU file for a button and counter static page
 
 memory section
 
-01 04 09        one object, starting at 4, length 9
+03              three FORMATs
+    04 09       one REFERENCE at 4
+                one STRING at 6 with length 9
+                another STRING at 6 with length 9
 
 49 6e 63 72 65 6d 65 6e 74 "Increment"
+43 6c 69 63 6b 20 6d 65 "Click me"
 
+the drawing section for this application looks like:
+
+00              BEGIN_FRAME instruction
+	01          use "Increment" for label
+
+06              DRAW_TEXT
+	01          use "Increment:" for content
+	00          use default font
+
+04              DRAW_BUTTON
+    01
+    00
+
+01              END_FRAME
+
+
+---------------------------------------------------------------------------------
 
 
 bigger example ATHRU file for a messaging app
