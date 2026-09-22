@@ -23,6 +23,9 @@ build a compliant browser for these standards is ridiculous.
 
 data types:
 
+- NONE 00
+    placeholder, do nothing, unimplemented etc.
+
 - FORMAT 01
     one byte, number of member types
     preceeding bytes are type of member, like members of struct
@@ -46,8 +49,12 @@ data types:
 - BLOB 07
     6 bytes (64 bit), BLOB size in bytes
 
-- REFERENCE 08
+- FUNCTION 08
+    
+
+- REFERENCE 09
     6 bytes (64 bit), pointer value
+
 
 example types:
 

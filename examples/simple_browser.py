@@ -12,7 +12,7 @@ class Format():
         self.count = fmt[0]
 
     def len(self):
-        return 15
+        return 16
 
     def element(self, addr):
         return 'Hello, World!'
@@ -60,7 +60,7 @@ class Renderer():
         print("fuck you")
 
     def exec(self):
-        while self.index < len(self.bytes):
+        while self.index < len(self.bytes) - 1:
             inst = self.bytes[self.index]
             self.interp(inst)
 
